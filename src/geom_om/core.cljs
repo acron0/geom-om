@@ -78,11 +78,11 @@
        (set-new-heatmap-data! data))
      om/IRender
      (render [_]
-       (dom/div nil
-                (dom/button #js {:onClick #(set-new-xy-plot-data! data)} "Generate")
-                (svg-chart data :xy-plot)
-                (dom/button #js {:onClick #(set-new-heatmap-data! data)} "Generate")
-                (svg-chart data :heatmap)))))
+       (time (dom/div nil
+                      (dom/button #js {:onClick #(set-new-xy-plot-data! data)} "Generate")
+                      (svg-chart data :xy-plot)
+                      (dom/button #js {:onClick #(set-new-heatmap-data! data)} "Generate")
+                      (svg-chart data :heatmap))))))
   app-state
   {:target (. js/document (getElementById "app"))})
 
