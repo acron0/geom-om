@@ -10,6 +10,7 @@
                  [sablono "0.3.4"]
                  [org.omcljs/om "0.8.8"]
                  [thi.ng/geom "0.0.881"]
+                 [cljs-http "0.1.35"]
                  [hiccups "0.3.0"]]
 
   :plugins [[lein-cljsbuild "1.0.5"]
@@ -47,7 +48,7 @@
              ;; Start an nREPL server into the running figwheel process
              :nrepl-port 7888
 
-             ;; Server Ring Handler (optional)
+             ;; Server Ring HandLer (optional)
              ;; if you want to embed a ring handler into the figwheel http-kit
              ;; server, this is for simple ring servers, if this
              ;; doesn't work for you just run your own server :)
@@ -68,3 +69,6 @@
              ;; to configure a different figwheel logfile path
              ;; :server-logfile "tmp/logs/figwheel-logfile.log"
              })
+(comment
+  (do (use 'figwheel-sidecar.repl-api)
+      (cljs-repl)))
