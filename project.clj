@@ -48,7 +48,7 @@
              ;; Start an nREPL server into the running figwheel process
              :nrepl-port 7888
 
-             ;; Server Ring Handler (optional)
+             ;; Server Ring HandLer (optional)
              ;; if you want to embed a ring handler into the figwheel http-kit
              ;; server, this is for simple ring servers, if this
              ;; doesn't work for you just run your own server :)
