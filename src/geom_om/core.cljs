@@ -1,90 +1,83 @@
 (ns ^:figwheel-always geom-om.core
-    (:require-macros [hiccups.core :as hiccups])
-    (:require[om.core :as om :include-macros true]
-             [om.dom :as dom :include-macros true]
-             [thi.ng.geom.viz.core :as viz]
-             [thi.ng.geom.svg.core :as svg]
-             [thi.ng.geom.core.vector :as v]
-             [thi.ng.geom.core :as g]
-             [thi.ng.geom.core.utils :as gu]
-             [thi.ng.math.simplexnoise :as n]
-             [thi.ng.math.core :as m :refer [PI]]
-             [thi.ng.color.gradients :as grad]
-             [hiccups.runtime :as hiccupsrt]))
+    (:require-macros [hiccups.core :as hiccups]
+                     [cljs.core.async.macros :refer [go]])
+    (:require  [cljs.core.async :refer [<! >! chan close! sliding-buffer put! alts!]]
+               [cljs.reader :refer [read-string]]
+               [om.core :as om :include-macros true]
+               [om.dom :as dom :include-macros true]
+               [thi.ng.geom.viz.core :as viz]
+               [thi.ng.geom.svg.core :as svg]
+               [thi.ng.geom.core.vector :as v]
+               [thi.ng.geom.core :as g]
+               [thi.ng.geom.core.utils :as gu]
+               [thi.ng.math.simplexnoise :as n]
+               [thi.ng.math.core :as m :refer [PI]]
+               [thi.ng.color.gradients :as grad]
+               [hiccups.runtime :as hiccupsrt]
+               [goog.string :as gstring]
+               [goog.string.format]
+               [cljs-http.client :as http]))
 
 (enable-console-print!)
 
 ;; define your app data so that it doesn't get over-written on reload
 
 (defonce app-state (atom {:xy-plot {}
-                          :heatmap {}}))
+                          :xy-plot-data {}}))
+
+(def chart-width 800)
+(def chart-height 600)
 
 (defn set-new-xy-plot-data!
-  [cursor]
-  (om/update! cursor :xy-plot {:x-axis (viz/log-axis
-                                        {:domain [1 201] :range [50 590] :pos 550})
+  [cursor data]
+  (om/update! cursor :xy-plot {:x-axis (viz/linear-axis
+                                        {:domain [0 200]
+                                         :range [50 (- chart-width 10)]
+                                         :pos 550
+                                         :major 20
+                                         :minor 10})
                                :y-axis (viz/linear-axis
-                                        {:domain [0.1 100] :range [550 20] :major 10 :minor 5 :pos 50
+                                        {:domain [0 200]
+                                         :range [550 20]
+                                         :major 10
+                                         :minor 5
+                                         :pos 50
                                          :label-dist 15 :label {:text-anchor "end"}})
                                :grid   {:attribs {:stroke "#caa"}
                                         :minor-x true
                                         :minor-y true}
-                               :data   [{:values  (map (juxt identity #(Math/sqrt %)) (range 0 200 2))
-                                         :attribs {:fill "#0af" :stroke "none"}
+                               :data   [{:values  (:values data)
+                                         :attribs {:fill "#06f" :stroke "#06f"}
+                                         :shape   (viz/svg-square 2)
                                          :layout  viz/svg-scatter-plot}
-                                        {:values  (map (juxt identity #(m/random %)) (range 0 200 2))
-                                         :attribs {:fill "none" :stroke "#f60"}
-                                         :shape   (viz/svg-triangle-down 6)
-                                         :layout  viz/svg-scatter-plot}]}))
+                                        {:values (:line data)
+                                         :attribs {:fill "none" :stroke "#f23"}
+                                         :layout viz/svg-line-plot}]}))
 
-(defn test-matrix
-  []
-  (let [start (int (m/random 100))]
-    (->> (for [y (range start (+ start 10)) x (range start (+ start 50))] (n/noise2 (* x 0.1) (* y 0.25)))
-         (viz/matrix-2d 50 10))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn heatmap-spec
-  [id]
-  (let [new-test-matrix (test-matrix)]
-    {:matrix        new-test-matrix
-     :value-domain  (viz/value-domain-bounds new-test-matrix)
-     :palette       (->> id (grad/cosine-schemes) (apply grad/cosine-gradient 100))
-     :palette-scale viz/linear-scale
-     :layout        viz/svg-heatmap}))
-
-(defn set-new-heatmap-data!
-  [cursor]
-  (om/update! cursor :heatmap {:x-axis (viz/linear-axis
-                                        {:domain [0 50] :range [50 550] :major 10 :minor 5 :pos 280})
-                               :y-axis (viz/linear-axis
-                                        {:domain [0 10] :range [280 20] :major 1 :pos 50
-                                         :label-dist 15 :label {:text-anchor "end"}})
-                               :data   [(merge (heatmap-spec :rainbow2) nil)]} ))
-
-(defn svg-chart
-  [data graph-key & {:keys [width height] :or {width 600 height 600}}]
-  (dom/div #js {:dangerouslySetInnerHTML
-                #js {:__html (->> (graph-key @data)
-                                    (viz/svg-plot2d-cartesian)
-                                    (svg/svg {:width width :height height})
-                                    (hiccups/html))}}))
+(defn xy-plot-view
+  [cursor owner]
+  (om/component
+   (dom/div nil
+            (dom/div #js {:dangerouslySetInnerHTML #js
+                          {:__html (hiccups/html
+                                    (svg/svg {:width chart-width :height chart-height}
+                                             (viz/svg-plot2d-cartesian (:xy-plot @app-state))))}}))))
 
 (om/root
  (fn [data owner]
    (reify
      om/IWillMount
      (will-mount [_]
-       (set-new-xy-plot-data! data)
-       (set-new-heatmap-data! data))
+       (go (let [resp (<! (http/get "/data/xyplot.edn"))
+                 new-data (:data (:body resp))]
+             (om/update! data :xy-plot-data new-data)
+             (set-new-xy-plot-data! data new-data))))
      om/IRender
      (render [_]
-       (time (dom/div nil
-                      (dom/button #js {:onClick #(set-new-xy-plot-data! data)} "Generate")
-                      (svg-chart data :xy-plot)
-                      (dom/button #js {:onClick #(set-new-heatmap-data! data)} "Generate")
-                      (svg-chart data :heatmap))))))
-  app-state
-  {:target (. js/document (getElementById "app"))})
+       (dom/div nil (om/build xy-plot-view data)))))
+ app-state {:target (. js/document (getElementById "app"))})
 
 ;;
 (defn on-js-reload [])
