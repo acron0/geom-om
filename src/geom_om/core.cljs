@@ -30,6 +30,7 @@
 (def chart-width 800)
 (def chart-height 600)
 (def default-gradations 100)
+(def chart-color-cosine [[0.5 0.5 0] [0.5 0.5 0] [0.1 0.5 0] [0.0 0.0 0]])
 
 (defn linear-scale
   [domain range]
@@ -41,7 +42,7 @@
   (let [matrix (viz/matrix-2d size-x size-y heatmap-data)]
     {:matrix        matrix
      :value-domain  [lcb ucb]
-     :palette       (->> id (grad/cosine-schemes) (apply grad/cosine-gradient grads))
+     :palette       (apply grad/cosine-gradient grads chart-color-cosine)
      :palette-scale linear-scale
      :layout        viz/svg-heatmap
      }))
@@ -58,8 +59,8 @@
 
 (defn set-new-heatmap-data!
   [cursor data lcb ucb gradations]
-  (let [lcb (if (nil? lcb) (apply min data) lcb)
-        ucb (if (nil? ucb) (apply max data) ucb)
+  (let [lcb (if (nil? lcb) (.floor js/Math (apply min data)) lcb)
+        ucb (if (nil? ucb) (.ceil js/Math (apply max data)) ucb)
         gradations (if (nil? gradations) default-gradations gradations)]
     (om/update! cursor :heatmap {:x-axis (viz/linear-axis
                                           {:domain [0 x-readings]
