@@ -16,7 +16,8 @@
             [hiccups.runtime :as hiccupsrt]
             [goog.string :as gstring]
             [goog.string.format]
-            [cljs-http.client :as http]))
+            [cljs-http.client :as http]
+            [bardo.interpolate :refer [interpolate]]))
 
 (enable-console-print!)
 
@@ -28,6 +29,18 @@
 (def chart-height 600)
 (def default-gradations 100)
 (def chart-color-cosine [[0.5 0.5 0] [0.5 0.5 0] [0.1 0.5 0] [0.0 0.0 0]])
+
+(def color-scheme
+  "http://colorbrewer2.org/?type=diverging&scheme=RdYlBu&n=10"
+  [[165,0,38] [215,48,39] [244,109,67] [253,174,97] [254,224,144]
+   [224,243,248] [171,217,233] [116,173,209] [69,117,180] [49,54,149]])
+
+;;(defn generate-palette
+;;  [grads colors]
+;;  (let [times (map #(/ (+ % 1) grads) (range grads))]
+;;    ((interpolate 0 10) 0.5)))
+
+;;(println (generate-palette nil nil))
 
 (defn linear-scale
   [domain range]

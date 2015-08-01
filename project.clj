@@ -11,7 +11,8 @@
                  [org.omcljs/om "0.8.8"]
                  [thi.ng/geom "0.0.881"]
                  [cljs-http "0.1.35"]
-                 [hiccups "0.3.0"]]
+                 [hiccups "0.3.0"]
+                 [bardo "0.1.2-SNAPSHOT"]]
 
   :plugins [[lein-cljsbuild "1.0.5"]
             [lein-figwheel "0.3.5"]]
