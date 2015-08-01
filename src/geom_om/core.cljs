@@ -29,12 +29,14 @@
 (enable-console-print!)
 
 (om/root heatmap/chart
-         (:heatmap @app-state)
-         {:target (. js/document (getElementById "heatmap"))})
+         app-state
+         {:target (. js/document (getElementById "heatmap"))
+          :path [:heatmap]})
 
 (om/root xy/chart
-         (:xy @app-state)
-         {:target (. js/document (getElementById "xy-plot"))})
+         app-state
+         {:target (. js/document (getElementById "xy-plot"))
+          :path [:xy]})
 
 ;;
 (defn on-js-reload [])

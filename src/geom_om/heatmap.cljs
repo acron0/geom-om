@@ -1,30 +1,27 @@
 (ns geom-om.heatmap
   (:require-macros [hiccups.core :as hiccups]
-                     [cljs.core.async.macros :refer [go]])
-    (:require [cljs.core.async :refer [<! >! chan close! sliding-buffer put! alts!]]
-              [cljs.reader :refer [read-string]]
-              [om.core :as om :include-macros true]
-              [om.dom :as dom :include-macros true]
-              [thi.ng.geom.viz.core :as viz]
-              [thi.ng.geom.svg.core :as svg]
-              [thi.ng.geom.core.vector :as v]
-              [thi.ng.geom.core :as g]
-              [thi.ng.geom.core.utils :as gu]
-              [thi.ng.math.simplexnoise :as n]
-              [thi.ng.math.core :as m :refer [PI]]
-              [thi.ng.color.gradients :as grad]
-              [hiccups.runtime :as hiccupsrt]
-              [goog.string :as gstring]
-              [goog.string.format]
-              [cljs-http.client :as http]))
+                   [cljs.core.async.macros :refer [go]])
+  (:require [cljs.core.async :refer [<! >! chan close! sliding-buffer put! alts!]]
+            [cljs.reader :refer [read-string]]
+            [om.core :as om :include-macros true]
+            [om.dom :as dom :include-macros true]
+            [thi.ng.geom.viz.core :as viz]
+            [thi.ng.geom.svg.core :as svg]
+            [thi.ng.geom.core.vector :as v]
+            [thi.ng.geom.core :as g]
+            [thi.ng.geom.core.utils :as gu]
+            [thi.ng.math.simplexnoise :as n]
+            [thi.ng.math.core :as m :refer [PI]]
+            [thi.ng.color.gradients :as grad]
+            [hiccups.runtime :as hiccupsrt]
+            [goog.string :as gstring]
+            [goog.string.format]
+            [cljs-http.client :as http]))
 
 (enable-console-print!)
 
 ;; define your app data so that it doesn't get over-written on reload
 
-(defonce app-state (atom {:heatmap {}
-                          :heatmap-mini {}
-                          :heatmap-data []}))
 (def x-readings 14)
 (def y-readings 48)
 (def chart-width 800)
@@ -89,36 +86,36 @@
                                                     gradations) nil)]})
 
     (om/update! cursor :element-legend {:x-axis (viz/linear-axis
-                                               {:domain [0 20]
-                                                :range [20 400]
-                                                :visible false})
-                                      :y-axis (viz/linear-axis
-                                               {:domain [0 gradations]
-                                                :range [(- chart-height 10) 35]
-                                                :major 1
-                                                :major-size 0
-                                                :pos 10
-                                                :label-dist -35
-                                                :label {:text-anchor "start"}
-                                                :format #(if (= % 0) lcb (if (= % gradations) ucb))})
-                                      :data     [(merge (heatmap-spec
-                                                         :yellow-magenta-cyan
-                                                         (vec (for [x (map #(/ % gradations)(range 0 gradations))]
-                                                                (m/mix lcb ucb x)))
-                                                         1
-                                                         gradations
-                                                         lcb
-                                                         ucb
-                                                         gradations) nil)]})))
+                                                 {:domain [0 20]
+                                                  :range [20 400]
+                                                  :visible false})
+                                        :y-axis (viz/linear-axis
+                                                 {:domain [0 gradations]
+                                                  :range [(- chart-height 10) 35]
+                                                  :major 1
+                                                  :major-size 0
+                                                  :pos 10
+                                                  :label-dist -35
+                                                  :label {:text-anchor "start"}
+                                                  :format #(if (= % 0) lcb (if (= % gradations) ucb))})
+                                        :data     [(merge (heatmap-spec
+                                                           :yellow-magenta-cyan
+                                                           (vec (for [x (map #(/ % gradations)(range 0 gradations))]
+                                                                  (m/mix lcb ucb x)))
+                                                           1
+                                                           gradations
+                                                           lcb
+                                                           ucb
+                                                           gradations) nil)]})))
 
 (defn update-chart-settings
   [owner cursor]
-   (set-new-heatmap-data!
-     cursor
-     (:data cursor)
-     (read-string (.-value (om/get-node owner "lcb-input")))
-     (read-string (.-value (om/get-node owner "ucb-input")))
-     (read-string (.-value (om/get-node owner "grads-input")))))
+  (set-new-heatmap-data!
+   cursor
+   (:data cursor)
+   (read-string (.-value (om/get-node owner "lcb-input")))
+   (read-string (.-value (om/get-node owner "ucb-input")))
+   (read-string (.-value (om/get-node owner "grads-input")))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -126,8 +123,8 @@
   [cursor]
   (go (let [resp (<! (http/get "/data/heatmap.edn"))
             new-data (:data (:body resp))]
-             (om/update! cursor :data new-data)
-             (set-new-heatmap-data! cursor new-data nil nil nil))))
+        (om/update! cursor :data new-data)
+        (set-new-heatmap-data! cursor new-data nil nil nil))))
 
 (defn chart
   [cursor owner]
@@ -137,36 +134,27 @@
       (load-data! cursor))
     om/IRender
     (render [_]
-      (dom/div nil
-               (dom/div #js {:style #js {:float "left"}
+      (dom/div #js {:style #js {:position "relative" :overflow "hidden" :white-space "nowrap"}}
+               (dom/div #js {:style #js {:display "inline-block"}
                              :dangerouslySetInnerHTML #js
-                             {:__html (->> (:heatmap cursor)
+                             {:__html (->> (:element cursor)
                                            (viz/svg-plot2d-cartesian)
                                            (svg/svg {:width chart-width :height chart-height})
                                            (hiccups/html))}})
-               (dom/div #js {:dangerouslySetInnerHTML #js
-                             {:__html (->> (:heatmap-mini cursor)
+               (dom/div #js {:style #js {:display "inline-block"}
+                             :dangerouslySetInnerHTML #js
+                             {:__html (->> (:element-legend cursor)
                                            (viz/svg-plot2d-cartesian)
                                            (svg/svg {:width chart-width :height chart-height})
                                            (hiccups/html))}})
                (dom/div nil
                         (dom/div nil
                                  (dom/span nil "Lower colour bound")
-                                 (dom/input #js {:ref "lcb-input" :placeholder (apply min (:heatmap-data cursor))})
+                                 (dom/input #js {:ref "lcb-input" :placeholder (apply min (:data cursor))})
                                  (dom/span nil "Upper colour bound")
-                                 (dom/input #js {:ref "ucb-input" :placeholder (apply max (:heatmap-data cursor))})
+                                 (dom/input #js {:ref "ucb-input" :placeholder (apply max (:data cursor))})
                                  (dom/span nil "Gradations")
                                  (dom/input #js {:ref "grads-input" :placeholder default-gradations})
                                  (dom/button #js {:onClick
-                                                  #(update-chart-settings owner cursor)} "Refresh")))))))
-
-;;(om/root
-;; (fn [data owner]
-;;   (reify
-;;     om/IWillMount
-;;     (will-mount [_]
-;;       (go (let [resp (<! (http/get "/data/heatmap.edn"))
-;                 new-data (:data (:body resp))]
-;             (om/update! data :heatmap-data new-data)
-;             (set-new-heatmap-data! data new-data nil nil nil))))
-;)))
+                                                  #(update-chart-settings owner cursor)} "Refresh")))
+               ))))
