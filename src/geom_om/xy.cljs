@@ -18,29 +18,23 @@
                [goog.string.format]
                [cljs-http.client :as http]))
 
-(defn chart2
-  [cursor owner]
-  (reify
-    om/IWillMount
-    (will-mount [_])
-    om/IRender
-    (render [_]
-      (dom/div nil "FOOBAdwdwwwdwdR"))))
-
-(def chart-width 800)
-(def chart-height 600)
+(def chart-width (atom 800))
+(def chart-height (atom 600))
+(def chart-x-range (atom [0 200]))
+(def chart-y-range (atom [0 200]))
+(def chart-data-chan (atom nil))
 
 (defn set-new-xy-plot-data!
   [cursor data]
   (om/update! cursor :element {:x-axis (viz/linear-axis
-                                        {:domain [0 200]
-                                         :range [50 (- chart-width 10)]
-                                         :pos 550
+                                        {:domain @chart-x-range
+                                         :range [50 (- @chart-width 10)]
+                                         :pos (- @chart-height 20)
                                          :major 20
                                          :minor 10})
                                :y-axis (viz/linear-axis
-                                        {:domain [0 200]
-                                         :range [550 20]
+                                        {:domain @chart-y-range
+                                         :range [(- @chart-height 20) 20]
                                          :major 10
                                          :minor 5
                                          :pos 50
@@ -58,24 +52,43 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn load-data!
-  [cursor]
-  (go (let [resp (<! (http/get "/data/xyplot.edn"))
-            new-data (:data (:body resp))]
-        (om/update! cursor :data new-data)
-        (set-new-xy-plot-data! cursor new-data))))
+;;(defn load-data!
+;;  [cursor]
+;;  (go (let [resp (<! (http/get "/data/xyplot.edn"))
+;;            new-data (:data (:body resp))]
+;;        (om/update! cursor :data new-data)
+;;        (set-new-xy-plot-data! cursor new-data))))
+
+(defn- data-loop [cursor input-chan]
+  (go (loop [new-data (<! input-chan)]
+        (println "GOT DATA!")
+        (set-new-xy-plot-data! cursor new-data)
+        (recur (<! input-chan)))))
 
 (defn chart
-  [cursor owner]
-  (reify
-    om/IWillMount
-    (will-mount [_]
-      (load-data! cursor))
-    om/IRender
-    (render [_]
-      (dom/div #js {:dangerouslySetInnerHTML #js
+  [{:keys [w h x-range y-range data-chan]
+    :or {w 800
+         h 600
+         x-range [0 200]
+         y-range [0 200]}}]
+  (if (nil? data-chan)
+    (throw (js/Error. "XY Plot requires a data channel!"))
+    (reset! chart-data-chan data-chan))
+  (reset! chart-width w)
+  (reset! chart-height h)
+  (reset! chart-x-range x-range)
+  (reset! chart-y-range y-range)
+  (fn
+    [cursor owner]
+    (reify
+      om/IWillMount
+      (will-mount [_]
+        (data-loop cursor @chart-data-chan))
+      om/IRender
+      (render [_]
+        (dom/div #js {:dangerouslySetInnerHTML #js
                       {:__html (->> @cursor
                                     :element
                                     viz/svg-plot2d-cartesian
-                                    (svg/svg {:width chart-width :height chart-height})
-                                    hiccups/html)}}))))
+                                    (svg/svg {:width @chart-width :height @chart-height})
+                                    hiccups/html)}})))))
