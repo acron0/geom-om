@@ -21,8 +21,6 @@
 
 (enable-console-print!)
 
-;; define your app data so that it doesn't get over-written on reload
-
 (def x-readings 14)
 (def y-readings 48)
 (def chart-width 800)
@@ -40,8 +38,6 @@
   (let [times (map #(/ (+ % 1) grads) (range grads))
         rgb-funcs {:red first :green second :blue last}]
     (mapv (fn [t] (mapv (fn [[k v]] ((pipeline (map #(/ (v %) 255) colors)) t) ) rgb-funcs)) times)))
-
-;;(println (generate-palette nil nil))
 
 (defn linear-scale
   [domain range]
@@ -135,7 +131,7 @@
 
 (defn load-data!
   [cursor]
-  (go (let [resp (<! (http/get "/data/heatmap.edn"))
+  (go (let [resp (<! (http/get "/data/heatmap2.edn"))
             new-data (->> resp :body :data (map :value))]
         (om/update! cursor :data new-data)
         (set-new-heatmap-data! cursor new-data nil nil nil))))
