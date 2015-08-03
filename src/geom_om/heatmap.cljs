@@ -25,32 +25,26 @@
 (def y-readings 48)
 (def chart-width 800)
 (def chart-height 600)
-(def default-gradations 100)
-(def chart-color-cosine [[0.5 0.5 0] [0.5 0.5 0] [0.1 0.5 0] [0.0 0.0 0]])
+(def default-gradations 20)
 
-(def color-scheme
+(def colour-scheme
   "http://colorbrewer2.org/?type=diverging&scheme=RdYlBu&n=10"
   [[49 54 149] [69 117 180] [116 173 209] [171 217 233] [224 243 248] [254 224 144] [253 174 97] [244 109 67] [215 48 39] [165 0 38]])
 
 (defn generate-palette
   "Generates n colours based on the gradations and color range specified - EXPENSIVE"
-  [grads colors]
+  [grads colours]
   (let [times (map #(/ (+ % 1) grads) (range grads))
         rgb-funcs {:red first :green second :blue last}]
-    (mapv (fn [t] (mapv (fn [[k v]] ((pipeline (map #(/ (v %) 255) colors)) t) ) rgb-funcs)) times)))
-
-(defn linear-scale
-  [domain range]
-  (fn [x]
-    (m/map-interval x domain range)))
+    (mapv (fn [t] (mapv (fn [[k v]] ((pipeline (map #(/ (v %) 255) colours)) t) ) rgb-funcs)) times)))
 
 (defn heatmap-spec
   [id heatmap-data size-x size-y lcb ucb grads]
   (let [matrix (viz/matrix-2d size-x size-y heatmap-data)]
     {:matrix        matrix
      :value-domain  [lcb ucb]
-     :palette       (generate-palette grads color-scheme);;(apply grad/cosine-gradient grads chart-color-cosine)
-     :palette-scale linear-scale
+     :palette       (generate-palette grads colour-scheme)
+     :palette-scale viz/linear-scale
      :layout        viz/svg-heatmap
      }))
 
