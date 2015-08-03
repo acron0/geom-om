@@ -17,7 +17,7 @@
             [goog.string :as gstring]
             [goog.string.format]
             [cljs-http.client :as http]
-            [bardo.interpolate :refer [interpolate]]))
+            [bardo.interpolate :refer [pipeline]]))
 
 (enable-console-print!)
 
@@ -32,13 +32,14 @@
 
 (def color-scheme
   "http://colorbrewer2.org/?type=diverging&scheme=RdYlBu&n=10"
-  [[165,0,38] [215,48,39] [244,109,67] [253,174,97] [254,224,144]
-   [224,243,248] [171,217,233] [116,173,209] [69,117,180] [49,54,149]])
+  [[49 54 149] [69 117 180] [116 173 209] [171 217 233] [224 243 248] [254 224 144] [253 174 97] [244 109 67] [215 48 39] [165 0 38]])
 
-;;(defn generate-palette
-;;  [grads colors]
-;;  (let [times (map #(/ (+ % 1) grads) (range grads))]
-;;    ((interpolate 0 10) 0.5)))
+(defn generate-palette
+  "Generates n colours based on the gradations and color range specified - EXPENSIVE"
+  [grads colors]
+  (let [times (map #(/ (+ % 1) grads) (range grads))
+        rgb-funcs {:red first :green second :blue last}]
+    (mapv (fn [t] (mapv (fn [[k v]] ((pipeline (map #(/ (v %) 255) colors)) t) ) rgb-funcs)) times)))
 
 ;;(println (generate-palette nil nil))
 
@@ -52,7 +53,7 @@
   (let [matrix (viz/matrix-2d size-x size-y heatmap-data)]
     {:matrix        matrix
      :value-domain  [lcb ucb]
-     :palette       (apply grad/cosine-gradient grads chart-color-cosine)
+     :palette       (generate-palette grads color-scheme);;(apply grad/cosine-gradient grads chart-color-cosine)
      :palette-scale linear-scale
      :layout        viz/svg-heatmap
      }))
