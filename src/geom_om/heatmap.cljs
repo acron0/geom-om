@@ -149,7 +149,6 @@
         (data-loop cursor @chart-data-chan))
       om/IRender
       (render [_]
-        (println "rendering..." (:data cursor))
         (dom/div #js {:style #js {:position "relative" :overflow "hidden" :whiteSpace "nowrap"}}
                  (dom/div #js {:style #js {:display "inline-block"}
                                :dangerouslySetInnerHTML #js
