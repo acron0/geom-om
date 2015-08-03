@@ -19,12 +19,13 @@
             [cljs-http.client :as http]
             [bardo.interpolate :refer [pipeline]]))
 
-(enable-console-print!)
-
 (def x-readings 14)
 (def y-readings 48)
-(def chart-width 800)
-(def chart-height 600)
+(def chart-width (atom 800))
+(def chart-height (atom 600))
+(def default-ucb (atom 0))
+(def default-lcb (atom 0))
+(def chart-data-chan (atom nil))
 (def default-gradations 20)
 
 (def colour-scheme
@@ -63,9 +64,11 @@
   (let [lcb (if (nil? lcb) (.floor js/Math (apply min data)) lcb)
         ucb (if (nil? ucb) (.ceil js/Math (apply max data)) ucb)
         gradations (if (nil? gradations) default-gradations gradations)]
+    (reset! default-lcb lcb)
+    (reset! default-ucb ucb)
     (om/update! cursor :element {:x-axis (viz/linear-axis
                                           {:domain [0 x-readings]
-                                           :range [55 (+ chart-width 5)]
+                                           :range [55 (+ @chart-width 5)]
                                            :major 1
                                            :pos 30
                                            :label-dist -10
@@ -74,7 +77,7 @@
                                            :label {:text-anchor "right"}})
                                  :y-axis (viz/linear-axis
                                           {:domain [0 y-readings]
-                                           :range [(- chart-height 10) 35]
+                                           :range [(- @chart-height 10) 35]
                                            :major 1
                                            :pos 50
                                            :label-dist 15
@@ -95,7 +98,7 @@
                                                   :visible false})
                                         :y-axis (viz/linear-axis
                                                  {:domain [0 gradations]
-                                                  :range [(- chart-height 10) 35]
+                                                  :range [(- @chart-height 10) 35]
                                                   :major 1
                                                   :major-size 0
                                                   :pos 10
@@ -123,42 +126,50 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn load-data!
-  [cursor]
-  (go (let [resp (<! (http/get "/data/heatmap2.edn"))
-            new-data (->> resp :body :data (map :value))]
-        (om/update! cursor :data new-data)
-        (set-new-heatmap-data! cursor new-data nil nil nil))))
+(defn- data-loop [cursor input-chan]
+  (go (loop [new-data (<! input-chan)]
+        (set-new-heatmap-data! cursor new-data nil nil nil)
+        (recur (<! input-chan)))))
 
 (defn chart
-  [cursor owner]
-  (reify
-    om/IWillMount
-    (will-mount [_]
-      (load-data! cursor))
-    om/IRender
-    (render [_]
-      (dom/div #js {:style #js {:position "relative" :overflow "hidden" :whiteSpace "nowrap"}}
-               (dom/div #js {:style #js {:display "inline-block"}
-                             :dangerouslySetInnerHTML #js
-                             {:__html (->> (:element cursor)
-                                           (viz/svg-plot2d-cartesian)
-                                           (svg/svg {:width chart-width :height chart-height})
-                                           (hiccups/html))}})
-               (dom/div #js {:style #js {:display "inline-block"}
-                             :dangerouslySetInnerHTML #js
-                             {:__html (->> (:element-legend cursor)
-                                           (viz/svg-plot2d-cartesian)
-                                           (svg/svg {:width chart-width :height chart-height})
-                                           (hiccups/html))}})
-               (dom/div nil
-                        (dom/div nil
-                                 (dom/span nil "Lower colour bound")
-                                 (dom/input #js {:ref "lcb-input" :placeholder (.floor js/Math (apply min (:data cursor)))})
-                                 (dom/span nil "Upper colour bound")
-                                 (dom/input #js {:ref "ucb-input" :placeholder (.ceil js/Math (apply max (:data cursor)))})
-                                 (dom/span nil "Gradations")
-                                 (dom/input #js {:ref "grads-input" :placeholder default-gradations})
-                                 (dom/button #js {:onClick
-                                                  #(update-chart-settings owner cursor)} "Refresh")))
-               ))))
+  [{:keys [width height data-chan]
+    :or {width 800
+         height 600}}]
+  (if (nil? data-chan)
+    (throw (js/Error. "Heatmap requires a data channel!"))
+    (reset! chart-data-chan data-chan))
+  (reset! chart-width width)
+  (reset! chart-height height)
+  (fn
+    [cursor owner]
+    (reify
+      om/IWillMount
+      (will-mount [_]
+        (om/update! cursor {:element {} :element-legend {}})
+        (data-loop cursor @chart-data-chan))
+      om/IRender
+      (render [_]
+        (println "rendering..." (:data cursor))
+        (dom/div #js {:style #js {:position "relative" :overflow "hidden" :whiteSpace "nowrap"}}
+                 (dom/div #js {:style #js {:display "inline-block"}
+                               :dangerouslySetInnerHTML #js
+                               {:__html (->> (:element cursor)
+                                             (viz/svg-plot2d-cartesian)
+                                             (svg/svg {:width @chart-width :height @chart-height})
+                                             (hiccups/html))}})
+                 (dom/div #js {:style #js {:display "inline-block"}
+                               :dangerouslySetInnerHTML #js
+                               {:__html (->> (:element-legend cursor)
+                                             (viz/svg-plot2d-cartesian)
+                                             (svg/svg {:width @chart-width :height @chart-height})
+                                             (hiccups/html))}})
+                 (dom/div nil
+                          (dom/div nil
+                                   (dom/span nil "Lower colour bound")
+                                   (dom/input #js {:ref "lcb-input" :placeholder @default-lcb})
+                                   (dom/span nil "Upper colour bound")
+                                   (dom/input #js {:ref "ucb-input" :placeholder @default-ucb})
+                                   (dom/span nil "Gradations")
+                                   (dom/input #js {:ref "grads-input" :placeholder default-gradations})
+                                   (dom/button #js {:onClick
+                                                    #(update-chart-settings owner cursor)} "Refresh"))))))))

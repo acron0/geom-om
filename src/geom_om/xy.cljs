@@ -52,30 +52,22 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;(defn load-data!
-;;  [cursor]
-;;  (go (let [resp (<! (http/get "/data/xyplot.edn"))
-;;            new-data (:data (:body resp))]
-;;        (om/update! cursor :data new-data)
-;;        (set-new-xy-plot-data! cursor new-data))))
-
 (defn- data-loop [cursor input-chan]
   (go (loop [new-data (<! input-chan)]
-        (println "GOT DATA!")
         (set-new-xy-plot-data! cursor new-data)
         (recur (<! input-chan)))))
 
 (defn chart
-  [{:keys [w h x-range y-range data-chan]
-    :or {w 800
-         h 600
+  [{:keys [width height x-range y-range data-chan]
+    :or {width 800
+         height 600
          x-range [0 200]
          y-range [0 200]}}]
   (if (nil? data-chan)
     (throw (js/Error. "XY Plot requires a data channel!"))
     (reset! chart-data-chan data-chan))
-  (reset! chart-width w)
-  (reset! chart-height h)
+  (reset! chart-width width)
+  (reset! chart-height height)
   (reset! chart-x-range x-range)
   (reset! chart-y-range y-range)
   (fn
@@ -83,6 +75,7 @@
     (reify
       om/IWillMount
       (will-mount [_]
+        (om/update! cursor {:element {}})
         (data-loop cursor @chart-data-chan))
       om/IRender
       (render [_]

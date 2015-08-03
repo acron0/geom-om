@@ -20,34 +20,40 @@
                [geom-om.xy :as xy]
                [geom-om.heatmap :as heatmap]))
 
-(defonce app-state (atom {:xy-data-chan (chan)
-                          :xy{:element {}
-                              :data {}}
-                          :heatmap {:element {}
-                                    :element-legend {}
-                                    :data {}}}))
+(defonce xy-data-chan (chan))
+(defonce heatmap-data-chan (chan))
+(defonce app-state (atom {:xy {} :heatmap {}}))
 
 (enable-console-print!)
 
-;;;;;;
+;;;;;;;;;;
+;; Heatmap
 
-(om/root heatmap/chart
+(go (let [resp (<! (http/get "/data/heatmap2.edn"))
+          new-data (->> resp :body :data (map :value))]
+      (put! heatmap-data-chan new-data)))
+
+(om/root (heatmap/chart
+          {:width 800
+           :height 600
+           :data-chan heatmap-data-chan})
          app-state
          {:target (. js/document (getElementById "heatmap"))
           :path [:heatmap]})
 
-;;;;;;
+;;;;;;;;;;
+;; XY plot
 
 (go (let [resp (<! (http/get "/data/xyplot.edn"))
           new-data (:data (:body resp))]
-          (put! (:xy-data-chan @app-state) new-data)))
+      (put! xy-data-chan new-data)))
 
 (om/root (xy/chart
           {:width 800
            :height 600
            :x-range [0 200]
            :y-range [0 200]
-           :data-chan (:xy-data-chan @app-state)})
+           :data-chan xy-data-chan})
          app-state
          {:target (. js/document (getElementById "xy-plot"))
           :path [:xy]})
