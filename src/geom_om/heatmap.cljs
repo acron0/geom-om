@@ -135,7 +135,7 @@
 (defn load-data!
   [cursor]
   (go (let [resp (<! (http/get "/data/heatmap.edn"))
-            new-data (:data (:body resp))]
+            new-data (->> resp :body :data (map :value))]
         (om/update! cursor :data new-data)
         (set-new-heatmap-data! cursor new-data nil nil nil))))
 
@@ -147,7 +147,7 @@
       (load-data! cursor))
     om/IRender
     (render [_]
-      (dom/div #js {:style #js {:position "relative" :overflow "hidden" :white-space "nowrap"}}
+      (dom/div #js {:style #js {:position "relative" :overflow "hidden" :whiteSpace "nowrap"}}
                (dom/div #js {:style #js {:display "inline-block"}
                              :dangerouslySetInnerHTML #js
                              {:__html (->> (:element cursor)
