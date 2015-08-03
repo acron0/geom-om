@@ -154,9 +154,9 @@
                (dom/div nil
                         (dom/div nil
                                  (dom/span nil "Lower colour bound")
-                                 (dom/input #js {:ref "lcb-input" :placeholder (apply min (:data cursor))})
+                                 (dom/input #js {:ref "lcb-input" :placeholder (.floor js/Math (apply min (:data cursor)))})
                                  (dom/span nil "Upper colour bound")
-                                 (dom/input #js {:ref "ucb-input" :placeholder (apply max (:data cursor))})
+                                 (dom/input #js {:ref "ucb-input" :placeholder (.ceil js/Math (apply max (:data cursor)))})
                                  (dom/span nil "Gradations")
                                  (dom/input #js {:ref "grads-input" :placeholder default-gradations})
                                  (dom/button #js {:onClick
