@@ -33,7 +33,7 @@
 ;;;;;;;;;;
 ;; Heatmap
 
-(go (let [resp (<! (http/get "/data/heatmap2.edn"))
+(go (let [resp (<! (http/get "/data/heatmap.edn"))
           new-data (->> resp :body :data (map :value))
           new-default-lcb (.floor js/Math (apply min new-data))
           new-default-ucb (.ceil js/Math (apply max new-data))]
@@ -47,7 +47,8 @@
 (om/root (heatmap/chart
           {:width 800
            :height 600
-           :data-chan heatmap-data-chan})
+           :data-chan heatmap-data-chan
+           :fill-out-of-range-cells? false})
          app-state
          {:target (. js/document (getElementById "heatmap"))
           :path [:heatmap]})

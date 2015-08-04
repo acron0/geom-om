@@ -21,9 +21,11 @@
 
 (def x-readings 14)
 (def y-readings 48)
+;; TODO move this to local state
 (def chart-width (atom 800))
 (def chart-height (atom 600))
 (def chart-data-chan (atom nil))
+(def chart-fill-oor-cells? (atom true))
 (def default-gradations 20)
 
 (def colour-scheme
@@ -61,7 +63,8 @@
   [cursor data lcb ucb gradations]
   (let [lcb (if (nil? lcb) (.floor js/Math (apply min data)) lcb)
         ucb (if (nil? ucb) (.ceil js/Math (apply max data)) ucb)
-        gradations (if (nil? gradations) default-gradations gradations)]
+        gradations (if (nil? gradations) default-gradations gradations)
+        adjusted-data (if @chart-fill-oor-cells? (map #(m/clamp % lcb ucb) data) data)]
     (om/update! cursor :data data)
     (om/update! cursor :element {:x-axis (viz/linear-axis
                                           {:domain [0 x-readings]
@@ -82,7 +85,7 @@
                                            :label {:text-anchor "end"}})
                                  :data     [(merge (heatmap-spec
                                                     :yellow-magenta-cyan
-                                                    data
+                                                    adjusted-data
                                                     x-readings
                                                     y-readings
                                                     lcb
@@ -120,7 +123,7 @@
         (recur (<! input-chan)))))
 
 (defn chart
-  [{:keys [width height data-chan]
+  [{:keys [width height data-chan fill-out-of-range-cells?]
     :or {width 800
          height 600}}]
   (if (nil? data-chan)
@@ -128,6 +131,7 @@
     (reset! chart-data-chan data-chan))
   (reset! chart-width width)
   (reset! chart-height height)
+  (reset! chart-fill-oor-cells? fill-out-of-range-cells?)
   (fn
     [cursor owner]
     (reify
