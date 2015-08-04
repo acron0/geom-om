@@ -23,7 +23,7 @@
 (defonce xy-data-chan (chan))
 (defonce heatmap-data-chan (chan))
 (defonce app-state (atom {:xy {}
-                          :heatmap {:data nil :foo "haha"}
+                          :heatmap {:data nil}
                           :heatmap-controls {:lcb   {:default 10}
                                              :ucb   {:default 30}
                                              :grads {:default 20}}}))
