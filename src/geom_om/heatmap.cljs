@@ -62,6 +62,7 @@
   (let [lcb (if (nil? lcb) (.floor js/Math (apply min data)) lcb)
         ucb (if (nil? ucb) (.ceil js/Math (apply max data)) ucb)
         gradations (if (nil? gradations) default-gradations gradations)]
+    (om/update! cursor :data data)
     (om/update! cursor :element {:x-axis (viz/linear-axis
                                           {:domain [0 x-readings]
                                            :range [55 (+ @chart-width 5)]
@@ -115,7 +116,6 @@
 
 (defn- data-loop [cursor input-chan]
   (go (loop [{:keys [data lcb ucb grads]} (<! input-chan)]
-        (om/update! cursor :data data)
         (set-new-heatmap-data! cursor data lcb ucb grads)
         (recur (<! input-chan)))))
 
@@ -133,20 +133,19 @@
     (reify
       om/IWillMount
       (will-mount [_]
-        (om/transact! cursor #(assoc % :element {} :element-legend {} :data {}))
         (data-loop cursor @chart-data-chan))
       om/IRender
       (render [_]
         (dom/div #js {:style #js {:position "relative" :overflow "hidden" :whiteSpace "nowrap"}}
-                 (dom/div #js {:style #js {:display "inline-block"}
-                               :dangerouslySetInnerHTML #js
-                               {:__html (->> (:element cursor)
-                                             (viz/svg-plot2d-cartesian)
-                                             (svg/svg {:width @chart-width :height @chart-height})
-                                             (hiccups/html))}})
-                 (dom/div #js {:style #js {:display "inline-block"}
-                               :dangerouslySetInnerHTML #js
-                               {:__html (->> (:element-legend cursor)
-                                             (viz/svg-plot2d-cartesian)
-                                             (svg/svg {:width @chart-width :height @chart-height})
-                                             (hiccups/html))}}))))))
+                    (dom/div #js {:style #js {:display "inline-block"}
+                                  :dangerouslySetInnerHTML #js
+                                  {:__html (->> (:element cursor)
+                                                (viz/svg-plot2d-cartesian)
+                                                (svg/svg {:width @chart-width :height @chart-height})
+                                                (hiccups/html))}})
+                    (dom/div #js {:style #js {:display "inline-block"}
+                                  :dangerouslySetInnerHTML #js
+                                  {:__html (->> (:element-legend cursor)
+                                                (viz/svg-plot2d-cartesian)
+                                                (svg/svg {:width @chart-width :height @chart-height})
+                                                (hiccups/html))}}))))))

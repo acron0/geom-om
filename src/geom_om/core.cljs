@@ -22,10 +22,11 @@
 
 (defonce xy-data-chan (chan))
 (defonce heatmap-data-chan (chan))
-(defonce app-state (atom {:xy {} :heatmap {:lcb   {:default 10}
-                                           :ucb   {:default 30}
-                                           :grads {:default 20}
-                                           :data nil}}))
+(defonce app-state (atom {:xy {}
+                          :heatmap {:data nil :foo "haha"}
+                          :heatmap-controls {:lcb   {:default 10}
+                                             :ucb   {:default 30}
+                                             :grads {:default 20}}}))
 
 (enable-console-print!)
 
@@ -36,12 +37,12 @@
           new-data (->> resp :body :data (map :value))
           new-default-lcb (.floor js/Math (apply min new-data))
           new-default-ucb (.ceil js/Math (apply max new-data))]
-      (om/update! (om/root-cursor app-state) [:heatmap :lcb :default] new-default-lcb)
-      (om/update! (om/root-cursor app-state) [:heatmap :ucb :default] new-default-ucb)
+      (om/update! (om/root-cursor app-state) [:heatmap-controls :lcb :default] new-default-lcb)
+      (om/update! (om/root-cursor app-state) [:heatmap-controls :ucb :default] new-default-ucb)
       (put! heatmap-data-chan {:data new-data
                                :lcb new-default-lcb
                                :ucb new-default-ucb
-                               :grads (-> @app-state :heatmap :grads :default)})))
+                               :grads (-> @app-state :heatmap-controls :grads :default)})))
 
 (om/root (heatmap/chart
           {:width 800
@@ -61,7 +62,7 @@
         lcb       (if (nil? raw-lcb) (-> cursor :lcb :default) raw-lcb)
         ucb       (if (nil? raw-ucb) (-> cursor :ucb :default) raw-ucb)
         grads     (if (nil? raw-grads) (-> cursor :grads :default) raw-grads)]
-    (put! heatmap-data-chan {:data (:data cursor)
+    (put! heatmap-data-chan {:data (-> @app-state :heatmap :data)
                              :lcb lcb
                              :ucb ucb
                              :grads grads}))
@@ -82,7 +83,7 @@
                                    #(update-chart-settings owner cursor)} "Refresh"))))
  app-state
  {:target (. js/document (getElementById "heatmap-controls"))
-  :path [:heatmap]})
+  :path [:heatmap-controls]})
 
 ;;;;;;;;;;
 ;; XY plot
