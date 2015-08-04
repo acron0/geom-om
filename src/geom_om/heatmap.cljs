@@ -23,8 +23,6 @@
 (def y-readings 48)
 (def chart-width (atom 800))
 (def chart-height (atom 600))
-(def default-ucb (atom 0))
-(def default-lcb (atom 0))
 (def chart-data-chan (atom nil))
 (def default-gradations 20)
 
@@ -64,10 +62,6 @@
   (let [lcb (if (nil? lcb) (.floor js/Math (apply min data)) lcb)
         ucb (if (nil? ucb) (.ceil js/Math (apply max data)) ucb)
         gradations (if (nil? gradations) default-gradations gradations)]
-    (if (zero? @default-lcb)
-      (reset! default-lcb lcb))
-    (if (zero? @default-ucb)
-      (reset! default-ucb ucb))
     (om/update! cursor :element {:x-axis (viz/linear-axis
                                           {:domain [0 x-readings]
                                            :range [55 (+ @chart-width 5)]
@@ -117,21 +111,12 @@
                                                            ucb
                                                            gradations) nil)]})))
 
-(defn update-chart-settings
-  [owner cursor]
-  (set-new-heatmap-data!
-   cursor
-   (:data cursor)
-   (read-string (.-value (om/get-node owner "lcb-input")))
-   (read-string (.-value (om/get-node owner "ucb-input")))
-   (read-string (.-value (om/get-node owner "grads-input")))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn- data-loop [cursor input-chan]
-  (go (loop [new-data (<! input-chan)]
-        (om/update! cursor :data new-data)
-        (set-new-heatmap-data! cursor new-data nil nil nil)
+  (go (loop [{:keys [data lcb ucb grads]} (<! input-chan)]
+        (om/update! cursor :data data)
+        (set-new-heatmap-data! cursor data lcb ucb grads)
         (recur (<! input-chan)))))
 
 (defn chart
@@ -164,14 +149,4 @@
                                {:__html (->> (:element-legend cursor)
                                              (viz/svg-plot2d-cartesian)
                                              (svg/svg {:width @chart-width :height @chart-height})
-                                             (hiccups/html))}})
-                 (dom/div nil
-                          (dom/div nil
-                                   (dom/span nil "Lower colour bound")
-                                   (dom/input #js {:ref "lcb-input" :placeholder @default-lcb})
-                                   (dom/span nil "Upper colour bound")
-                                   (dom/input #js {:ref "ucb-input" :placeholder @default-ucb})
-                                   (dom/span nil "Gradations")
-                                   (dom/input #js {:ref "grads-input" :placeholder default-gradations})
-                                   (dom/button #js {:onClick
-                                                    #(update-chart-settings owner cursor)} "Refresh"))))))))
+                                             (hiccups/html))}}))))))
