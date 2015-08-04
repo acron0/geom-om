@@ -64,8 +64,10 @@
   (let [lcb (if (nil? lcb) (.floor js/Math (apply min data)) lcb)
         ucb (if (nil? ucb) (.ceil js/Math (apply max data)) ucb)
         gradations (if (nil? gradations) default-gradations gradations)]
-    (reset! default-lcb lcb)
-    (reset! default-ucb ucb)
+    (if (zero? @default-lcb)
+      (reset! default-lcb lcb))
+    (if (zero? @default-ucb)
+      (reset! default-ucb ucb))
     (om/update! cursor :element {:x-axis (viz/linear-axis
                                           {:domain [0 x-readings]
                                            :range [55 (+ @chart-width 5)]
@@ -128,6 +130,7 @@
 
 (defn- data-loop [cursor input-chan]
   (go (loop [new-data (<! input-chan)]
+        (om/update! cursor :data new-data)
         (set-new-heatmap-data! cursor new-data nil nil nil)
         (recur (<! input-chan)))))
 
@@ -145,7 +148,7 @@
     (reify
       om/IWillMount
       (will-mount [_]
-        (om/update! cursor {:element {} :element-legend {}})
+        (om/transact! cursor #(assoc % :element {} :element-legend {} :data {}))
         (data-loop cursor @chart-data-chan))
       om/IRender
       (render [_]
