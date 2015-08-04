@@ -75,7 +75,7 @@
     (reify
       om/IWillMount
       (will-mount [_]
-        (om/update! cursor {:element {}})
+        (om/transact! cursor #(assoc % :element {}))
         (data-loop cursor @chart-data-chan))
       om/IRender
       (render [_]
