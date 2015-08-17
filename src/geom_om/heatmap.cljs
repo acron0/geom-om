@@ -17,7 +17,7 @@
             [goog.string :as gstring]
             [goog.string.format]
             [cljs-http.client :as http]
-            [bardo.interpolate :refer [pipeline]]))
+            [bardo.interpolate :refer [interpolate pipeline]]))
 
 (def x-readings 14)
 (def y-readings 48)
@@ -63,6 +63,7 @@
   [cursor data lcb ucb gradations]
   (let [lcb (if (nil? lcb) (.floor js/Math (apply min data)) lcb)
         ucb (if (nil? ucb) (.ceil js/Math (apply max data)) ucb)
+        midcb ((interpolate lcb ucb) 0.5)
         gradations (if (nil? gradations) default-gradations gradations)
         adjusted-data (if @chart-fill-oor-cells? (map #(m/clamp % lcb ucb) data) data)]
     (om/update! cursor :data data)
@@ -104,7 +105,10 @@
                                                   :pos 10
                                                   :label-dist -35
                                                   :label {:text-anchor "start"}
-                                                  :format #(if (= % 0) lcb (if (= % gradations) ucb))})
+                                                  :format #(cond
+                                                             (= % 0) lcb
+                                                             (= % gradations) ucb
+                                                             (= % (/ gradations 2)) midcb)})
                                         :data     [(merge (heatmap-spec
                                                            :yellow-magenta-cyan
                                                            (vec (for [x (map #(/ % gradations)(range 0 gradations))]
