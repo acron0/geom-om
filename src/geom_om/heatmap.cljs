@@ -154,7 +154,7 @@
         (recur (<! input-chan)))))
 
 (defn chart
-  [{:keys [width height data-chan fill-out-of-range-cells?]
+  [{:keys [width height data-chan fill-out-of-range-cells? x-label y-label]
     :or {width 800
          height 600}}]
   (if (nil? data-chan)
@@ -178,7 +178,23 @@
                                (viz/svg-plot2d-cartesian)
                                (svg/svg {:width @chart-width :height @chart-height}))]
           (println main-data)
-          (dom/div #js {:style #js {:position "relative" :overflow "hidden" :whiteSpace "nowrap"}}
+          (dom/div #js {:style #js {:position "relative"
+                                    :overflow "hidden"
+                                    :whiteSpace "nowrap"
+                                    :font-family "sans-serif"
+                                    :font-size "11px"
+                                    :text-align "center"
+                                    :width (str (+ 100 @chart-width) "px")}}
+                   (dom/div nil (dom/span nil x-label))
+                   (dom/span #js {:style #js {:float "left"
+                                              ;;:height (str (/ @chart-height 2) "px")
+                                              :margin (str (/ @chart-height 2) "px -30px 0px -30px")
+
+                                              :-webkit-transform "rotate(-90deg)"
+                                              :-moz-transform "rotate(-90deg)"
+                                              :-ms-transform "rotate(-90deg)"
+                                              :-o-transform "rotate(-90deg)"
+                                              :filter "progid:DXImageTransform.Microsoft.BasicImage(rotation=3)"}} y-label)
                    (dom/div #js {:style #js {:display "inline-block"}
                                  :dangerouslySetInnerHTML #js
                                  {:__html (hiccups/html main-data)}})
